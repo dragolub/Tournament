@@ -162,6 +162,11 @@
             border-top: 1px dashed #ddd;
             padding-top: 20px;
         }
+        .logo {
+    display: flex;          /* Подрежда елементите хоризонтално */
+    align-items: center;   /* Центрира елементите вертикално */
+    gap: 10px;             /* Разстояние между логото и текста */
+}
         .third-place-title {
             text-align: center;
             font-weight: bold;
@@ -190,8 +195,11 @@
 </head>
 <body>
     <div class="container">
+       <div class="logo">
+    <img src="da-dao-logo.png" alt="DA DAO Bulgaria Logo" style="width: 100px; height: auto;">
+	 <h1>Генератор на турнирна схема</h1>
+</div>
        
-        <h1>Генератор на турнирна схема на Да Дао</h1>
         
         <form id="tournamentForm">
             <div>
