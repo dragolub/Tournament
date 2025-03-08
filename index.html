@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор на турнирна схема на Да Дао</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .config-section {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .players-section {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .player-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .bracket-section {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+            overflow-x: auto;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .seeded-player {
+            background-color: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+        .tournament-bracket {
+            display: flex;
+            margin-top: 20px;
+        }
+        .round {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            width: 180px;
+            margin-right: 40px;
+        }
+        .round-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .match {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        .match-spacer {
+            flex-grow: 1;
+        }
+        .team {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px 10px;
+            margin-bottom: 2px;
+            position: relative;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+        }
+        .team.seeded {
+            background-color: #ebf5fb;
+            border-left: 4px solid #3498db;
+        }
+        .team.empty {
+            background-color: #f8f9fa;
+            border: 1px dashed #ddd;
+            color: #95a5a6;
+        }
+        .connector {
+            position: absolute;
+            right: -40px;
+            border: 1px solid #ddd;
+        }
+        .connector.horizontal {
+            height: 1px;
+            width: 20px;
+        }
+        .connector.vertical {
+            width: 1px;
+        }
+        .connector.vertical.top {
+            border-bottom: none;
+        }
+        .connector.vertical.bottom {
+            border-top: none;
+        }
+        .error {
+            color: #e74c3c;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        .first-round {
+            background-color: #f0f8ff;
+        }
+        .final-round {
+            background-color: #fff8f0;
+        }
+        @media (max-width: 768px) {
+            .round {
+                width: 140px;
+                margin-right: 25px;
+            }
+            .team {
+                font-size: 14px;
+                padding: 6px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Генератор на турнирна схема на Да Дао</h1>
+    
+    <div class="container">
+        <div class="config-section">
+            <h2>Настройки на турнира</h2>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="totalPlayers">Общ брой състезатели:</label>
+                    <input type="number" id="totalPlayers" min="2" value="8">
+                    <div id="totalPlayersError" class="error"></div>
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label for="seededPlayers">Брой поставени състезатели:</label>
+                    <input type="number" id="seededPlayers" min="0" value="2">
+                    <div id="seededPlayersError" class="error"></div>
+                </div>
+            </div>
+            <button id="configBtn">Продължи</button>
+        </div>
+        
+        <div id="playersSection" class="players-section">
+            <h2>Въведете имената на състезателите</h2>
+            <div id="seededPlayersInputs" class="player-inputs">
+                <h3>Поставени състезатели</h3>
+                <!-- Тук ще се генерират полета за поставените състезатели -->
+            </div>
+            <div id="regularPlayersInputs" class="player-inputs" style="margin-top: 20px;">
+                <h3>Неподставени състезатели</h3>
+                <!-- Тук ще се генерират полета за неподставените състезатели -->
+            </div>
+            <button id="generateBtn" style="margin-top: 20px;">Генерирай схема</button>
+        </div>
+        
+        <div id="bracketSection" class="bracket-section">
+            <h2>Турнирна схема</h2>
+            <div id="bracketInfo"></div>
+            <div id="tournamentBracket" class="tournament-bracket">
+                <!-- Тук ще се генерира турнирната схема -->
+            </div>
+            <button id="newTournamentBtn" style="margin-top: 20px;">Нов турнир</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const configBtn = document.getElementById('configBtn');
+            const generateBtn = document.getElementById('generateBtn');
+            const newTournamentBtn = document.getElementById('newTournamentBtn');
+            const totalPlayersInput = document.getElementById('totalPlayers');
+            const seededPlayersInput = document.getElementById('seededPlayers');
+            const playersSection = document.getElementById('playersSection');
+            const bracketSection = document.getElementById('bracketSection');
+            const seededPlayersInputs = document.getElementById('seededPlayersInputs');
+            const regularPlayersInputs = document.getElementById('regularPlayersInputs');
+            const bracketInfo = document.getElementById('bracketInfo');
+            const tournamentBracket = document.getElementById('tournamentBracket');
+            
+            // Валидиране и продължаване към въвеждане на имена
+            configBtn.addEventListener('click', function() {
+                const totalPlayers = parseInt(totalPlayersInput.value);
+                const seededPlayers = parseInt(seededPlayersInput.value);
+                
+                let hasError = false;
+                
+                // Проверки
+                if (isNaN(totalPlayers) || totalPlayers < 2) {
+                    document.getElementById('totalPlayersError').textContent = 'Трябват поне 2 състезатели за турнир.';
+                    hasError = true;
+                } else {
+                    document.getElementById('totalPlayersError').textContent = '';
+                }
+                
+                if (isNaN(seededPlayers) || seededPlayers < 0) {
+                    document.getElementById('seededPlayersError').textContent = 'Броят на поставените играчи трябва да е неотрицателно число.';
+                    hasError = true;
+                } else if (seededPlayers > totalPlayers) {
+                    document.getElementById('seededPlayersError').textContent = 'Броят на поставените играчи не може да бъде по-голям от общия брой.';
+                    hasError = true;
+                } else {
+                    document.getElementById('seededPlayersError').textContent = '';
+                }
+                
+                if (!hasError) {
+                    // Генериране на полета за въвеждане на имена
+                    generatePlayerInputs(totalPlayers, seededPlayers);
+                    
+                    // Показване на секцията за имена
+                    playersSection.style.display = 'block';
+                }
+            });
+            
+            // Генериране на полета за имена
+            function generatePlayerInputs(totalPlayers, seededPlayers) {
+                seededPlayersInputs.innerHTML = '';
+                regularPlayersInputs.innerHTML = '';
+                
+                if (seededPlayers > 0) {
+                    const seededTitle = document.createElement('h3');
+                    seededTitle.textContent = 'Поставени състезатели';
+                    seededPlayersInputs.appendChild(seededTitle);
+                    
+                    for (let i = 1; i <= seededPlayers; i++) {
+                        const div = document.createElement('div');
+                        div.classList.add('seeded-player');
+                        
+                        const label = document.createElement('label');
+                        label.textContent = `Поставен играч ${i}:`;
+                        label.setAttribute('for', `seeded${i}`);
+                        
+                        const input = document.createElement('input');
+                        input.setAttribute('type', 'text');
+                        input.setAttribute('id', `seeded${i}`);
+                        input.setAttribute('placeholder', `Име на поставен играч ${i}`);
+                        input.classList.add('player-name-input');
+                        input.dataset.playerType = 'seeded';
+                        input.dataset.seedNumber = i;
+                        
+                        div.appendChild(label);
+                        div.appendChild(input);
+                        seededPlayersInputs.appendChild(div);
+                    }
+                }
+                
+                const regularCount = totalPlayers - seededPlayers;
+                if (regularCount > 0) {
+                    const regularTitle = document.createElement('h3');
+                    regularTitle.textContent = 'Неподставени състезатели';
+                    regularPlayersInputs.appendChild(regularTitle);
+                    
+                    for (let i = 1; i <= regularCount; i++) {
+                        const div = document.createElement('div');
+                        
+                        const label = document.createElement('label');
+                        label.textContent = `Играч ${i}:`;
+                        label.setAttribute('for', `regular${i}`);
+                        
+                        const input = document.createElement('input');
+                        input.setAttribute('type', 'text');
+                        input.setAttribute('id', `regular${i}`);
+                        input.setAttribute('placeholder', `Име на играч ${i}`);
+                        input.classList.add('player-name-input');
+                        input.dataset.playerType = 'regular';
+                        
+                        div.appendChild(label);
+                        div.appendChild(input);
+                        regularPlayersInputs.appendChild(div);
+                    }
+                }
+            }
+            
+            // Генериране на схемата
+            generateBtn.addEventListener('click', function() {
+                const totalPlayers = parseInt(totalPlayersInput.value);
+                const seededPlayers = parseInt(seededPlayersInput.value);
+                
+                // Събиране на имената на играчите
+                const players = [];
+                const playerInputs = document.querySelectorAll('.player-name-input');
+                
+                playerInputs.forEach(input => {
+                    const playerType = input.dataset.playerType;
+                    let name = input.value.trim() || input.placeholder;
+                    
+                    if (playerType === 'seeded') {
+                        name = `[${input.dataset.seedNumber}] ${name}`;
+                    }
+                    
+                    players.push({
+                        name: name,
+                        isSeeded: playerType === 'seeded',
+                        seedNumber: playerType === 'seeded' ? parseInt(input.dataset.seedNumber) : null
+                    });
+                });
+                
+                // Изчисляване на размера на схемата
+                const bracketSize = 2 ** Math.ceil(Math.log2(totalPlayers));
+                const byes = bracketSize - totalPlayers;
+                
+                bracketInfo.innerHTML = `
+                    <p>Общ брой състезатели: <strong>${totalPlayers}</strong></p>
+                    <p>Брой поставени състезатели: <strong>${seededPlayers}</strong></p>
+                    <p>Размер на схемата: <strong>${bracketSize}</strong> (със <strong>${byes}</strong> свободни места в първи кръг)</p>
+                `;
+                
+                // Генериране на схемата
+                generateBracket(players, bracketSize);
+                
+                // Показване на секцията със схемата
+                bracketSection.style.display = 'block';
+                
+                // Скролване до схемата
+                bracketSection.scrollIntoView({ behavior: 'smooth' });
+            });
+            
+            // Функция за генериране на схемата
+            function generateBracket(players, bracketSize) {
+                const seededPlayers = players.filter(p => p.isSeeded);
+                const unseededPlayers = players.filter(p => !p.isSeeded);
+                
+                // Сортиране на поставените играчи по номер
+                seededPlayers.sort((a, b) => a.seedNumber - b.seedNumber);
+                
+                // Създаване на схемата
+                const bracket = Array(bracketSize).fill(null);
+                
+                // Поставяне на поставените играчи на стратегически позиции
+                placeSeededPlayers(bracket, seededPlayers, bracketSize);
+                
+                // Разпределяне на останалите играчи и свободните места
+                const remainingSpots = [];
+                for (let i = 0; i < bracketSize; i++) {
+                    if (bracket[i] === null) {
+                        remainingSpots.push(i);
+                    }
+                }
+                
+                // Разбъркване на неподставените играчи и свободните места
+                const shuffledPlayers = [...unseededPlayers];
+                shuffleArray(shuffledPlayers);
+                
+                // Попълване на останалите места със играчи или "Свободно място"
+                for (let i = 0; i < remainingSpots.length; i++) {
+                    if (i < shuffledPlayers.length) {
+                        bracket[remainingSpots[i]] = shuffledPlayers[i];
+                    } else {
+                        bracket[remainingSpots[i]] = { name: "Свободно място", isEmpty: true };
+                    }
+                }
+                
+                // Визуализиране на схемата
+                visualizeBracket(bracket);
+            }
+            
+            // Функция за поставяне на поставените играчи
+            function placeSeededPlayers(bracket, seededPlayers, bracketSize) {
+                if (seededPlayers.length === 0) return;
+                
+                // Първият поставен отива на първа позиция
+                bracket[0] = seededPlayers[0];
+                
+                if (seededPlayers.length > 1) {
+                    // Вторият поставен отива в долната част на схемата
+                    bracket[bracketSize - 1] = seededPlayers[1];
+                }
+                
+                if (seededPlayers.length > 2) {
+                    // Третият и четвъртият се поставят в средата на полусхемите
+                    const quarterSize = Math.floor(bracketSize / 4);
+                    bracket[quarterSize] = seededPlayers[2];
+                    
+                    if (seededPlayers.length > 3) {
+                        bracket[quarterSize * 3] = seededPlayers[3];
+                    }
+                }
+                
+                // За повече от 4 поставени играчи
+                if (seededPlayers.length > 4) {
+                    const remainingSeeded = seededPlayers.slice(4);
+                    const sections = 8;
+                    const sectionSize = Math.floor(bracketSize / sections);
+                    
+                    const positions = [
+                        Math.floor(sectionSize / 2),
+                        sectionSize * 3 + Math.floor(sectionSize / 2),
+                        sectionSize * 5 + Math.floor(sectionSize / 2),
+                        sectionSize * 7 + Math.floor(sectionSize / 2)
+                    ];
+                    
+                    for (let i = 0; i < Math.min(4, remainingSeeded.length); i++) {
+                        bracket[positions[i]] = remainingSeeded[i];
+                    }
+                }
+            }
+            
+            // Функция за визуализиране на схемата
+            function visualizeBracket(firstRoundBracket) {
+                tournamentBracket.innerHTML = '';
+                
+                const bracketSize = firstRoundBracket.length;
+                const rounds = Math.log2(bracketSize);
+                
+                // Създаване на заглавия за кръговете
+                const roundTitles = [];
+                for (let r = 0; r < rounds; r++) {
+                    if (r === 0) {
+                        roundTitles.push("Първи кръг");
+                    } else if (r === rounds - 1) {
+                        roundTitles.push("Финал");
+                    } else if (r === rounds - 2) {
+                        roundTitles.push("Полуфинали");
+                    } else if (r === rounds - 3) {
+                        roundTitles.push("Четвъртфинали");
+                    } else {
+                        roundTitles.push(`Кръг ${r+1}`);
+                    }
+                }
+                
+                // Създаване на колоните за всеки кръг
+                for (let r = 0; r < rounds; r++) {
+                    const roundDiv = document.createElement('div');
+                    roundDiv.classList.add('round');
+                    
+                    if (r === 0) {
+                        roundDiv.classList.add('first-round');
+                    }
+                    
+                    if (r === rounds - 1) {
+                        roundDiv.classList.add('final-round');
+                    }
+                    
+                    const titleDiv = document.createElement('div');
+                    titleDiv.classList.add('round-title');
+                    titleDiv.textContent = roundTitles[r];
+                    roundDiv.appendChild(titleDiv);
+                    
+                    const roundSize = bracketSize / (2 ** r);
+                    const matchCount = roundSize / 2;
+                    
+                    // За първи кръг
+                    if (r === 0) {
+                        for (let i = 0; i < matchCount; i++) {
+                            const matchDiv = document.createElement('div');
+                            matchDiv.classList.add('match');
+                            
+                            const player1 = firstRoundBracket[i * 2];
+                            const player2 = firstRoundBracket[i * 2 + 1];
+                            
+                            // Първи играч
+                            const team1Div = document.createElement('div');
+                            team1Div.classList.add('team');
+                            
+                            if (player1 && player1.isSeeded) {
+                                team1Div.classList.add('seeded');
+                            }
+                            
+                            if (player1 && player1.isEmpty) {
+                                team1Div.classList.add('empty');
+                            }
+                            
+                            team1Div.textContent = player1 ? player1.name : "TBD";
+                            matchDiv.appendChild(team1Div);
+                            
+                            // Втори играч
+                            const team2Div = document.createElement('div');
+                            team2Div.classList.add('team');
+                            
+                            if (player2 && player2.isSeeded) {
+                                team2Div.classList.add('seeded');
+                            }
+                            
+                            if (player2 && player2.isEmpty) {
+                                team2Div.classList.add('empty');
+                            }
+                            
+                            team2Div.textContent = player2 ? player2.name : "TBD";
+                            matchDiv.appendChild(team2Div);
+                            
+                            // Добавяне на линии, свързващи мачовете
+                            if (r < rounds - 1) {
+                                addConnectors(matchDiv, team1Div, team2Div);
+                            }
+                            
+                            roundDiv.appendChild(matchDiv);
+                        }
+                    } else {
+                        // За другите кръгове
+                        const prevRoundMatchCount = bracketSize / (2 ** (r-1)) / 2;
+                        const spacing = prevRoundMatchCount / matchCount;
+                        
+                        for (let i = 0; i < matchCount; i++) {
+                            const matchDiv = document.createElement('div');
+                            matchDiv.classList.add('match');
+                            
+                            // Добавяне на спейсъри за правилно подравняване
+                            const spacerHeight = spacing * 76 - 42; // 76px е височината на един мач, 42px височина за двата отбора
+                            
+                            // Първи играч
+                            const team1Div = document.createElement('div');
+                            team1Div.classList.add('team');
+                            team1Div.textContent = "TBD";
+                            matchDiv.appendChild(team1Div);
+                            
+                            // Втори играч
+                            const team2Div = document.createElement('div');
+                            team2Div.classList.add('team');
+                            team2Div.textContent = "TBD";
+                            matchDiv.appendChild(team2Div);
+                            
+                            // Добавяне на линии, свързващи мачовете
+                            if (r < rounds - 1) {
+                                addConnectors(matchDiv, team1Div, team2Div);
+                            }
+                            
+                            roundDiv.appendChild(matchDiv);
+                        }
+                    }
+                    
+                    tournamentBracket.appendChild(roundDiv);
+                }
+            }
+            
+            // Функция за добавяне на линии, свързващи мачовете
+            function addConnectors(matchDiv, team1Div, team2Div) {
+                // Хоризонтална линия от първия отбор
+                const connector1Horizontal = document.createElement('div');
+                connector1Horizontal.classList.add('connector', 'horizontal');
+                connector1Horizontal.style.top = '20px';
+                team1Div.appendChild(connector1Horizontal);
+                
+                // Хоризонтална линия от втория отбор
+                const connector2Horizontal = document.createElement('div');
+                connector2Horizontal.classList.add('connector', 'horizontal');
+                connector2Horizontal.style.top = '20px';
+                team2Div.appendChild(connector2Horizontal);
+                
+                // Вертикална линия свързваща двата отбора
+                const connectorVertical = document.createElement('div');
+                connectorVertical.classList.add('connector', 'vertical');
+                connectorVertical.style.top = '20px';
+                connectorVertical.style.height = '42px'; // Разстоянието между двата отбора
+                connectorVertical.style.right = '-20px';
+                matchDiv.appendChild(connectorVertical);
+            }
+            
+            // Функция за разбъркване на масив
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            
+            // Рестартиране на турнира
+            newTournamentBtn.addEventListener('click', function() {
+                playersSection.style.display = 'none';
+                bracketSection.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
